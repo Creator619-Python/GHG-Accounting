@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Emission Calculator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 40px;
+        }
+        .toggle-section {
+            display: none; /* Ensure sections are hidden by default */
+        }
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+        }
+        .chart-container {
+            flex: 1 1 calc(50% - 20px); /* Two charts per row with 20px gap */
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #343a40;
+            font-weight: bold;
+        }
+        .slider-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            max-width: 400px;
+            margin: auto; /* Center-align the slider */
+            background-color: #ffffff;
+        }
+        .slider-container label {
+            font-weight: bold;
+            text-align: center;
+            display: block;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right, #28a745 0%, #28a745 var(--value), #ffc107 var(--value), #ffc107 100%);
+            outline: none;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+        .slider:hover {
+            opacity: 1;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #343a40;
+            cursor: pointer;
+        }
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #343a40;
+            cursor: pointer;
+        }
+        .percentage-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .percentage-display span {
+            width: 48%;
+            text-align: center;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                flex: 1 1 100%; /* Stacks charts vertically on smaller screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">🌿 Carbon Emission Calculator</h1>
+        <div class="card p-4">
+            <h5 class="card-title text-center mb-4">Enter Your Data</h5>
+            <form id="emissionForm">
+                <!-- Electricity Inputs -->
+                <div class="mb-4">
+                    <label for="electricity" class="form-label">Electricity Usage (kWh):</label>
+                    <input type="number" class="form-control" id="electricity" min="0">
+                    <div class="slider-container">
+                        <label>Renewable vs Non-Renewable Electricity (%)</label>
+                        <input type="range" id="renewableElectricity" class="slider" min="0" max="100" value="50" oninput="updateSlider(this, 'renewableElectricityLabel', 'nonRenewableElectricityLabel')">
+                        <div class="percentage-display">
+                            <span>Renewable: <span id="renewableElectricityLabel">50%</span></span>
+                            <span>Non-Renewable: <span id="nonRenewableElectricityLabel">50%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Natural Gas Inputs -->
+                <div class="mb-4">
+                    <label for="naturalGas" class="form-label">Natural Gas Usage (kWh):</label>
+                    <input type="number" class="form-control" id="naturalGas" min="0">
+                    <div class="slider-container">
+                        <label>Renewable vs Non-Renewable Natural Gas (%)</label>
+                        <input type="range" id="renewableGas" class="slider" min="0" max="100" value="50" oninput="updateSlider(this, 'renewableGasLabel', 'nonRenewableGasLabel')">
+                        <div class="percentage-display">
+                            <span>Renewable: <span id="renewableGasLabel">50%</span></span>
+                            <span>Non-Renewable: <span id="nonRenewableGasLabel">50%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EV Inputs -->
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="evToggle">
+                    <label class="form-check-label" for="evToggle">⚡ Use an EV?</label>
+                </div>
+                <div id="evSection" class="toggle-section mt-3">
+                    <div class="mb-3">
+                        <label for="evDistance" class="form-label">EV Distance (km):</label>
+                        <input type="number" class="form-control" id="evDistance" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="evEfficiency" class="form-label">EV Efficiency (kWh/km):</label>
+                        <input type="number" class="form-control" id="evEfficiency" min="0">
+                    </div>
+                </div>
+
+                <!-- Vehicle Inputs -->
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="vehicleToggle">
+                    <label class="form-check-label" for="vehicleToggle">🚗 Use Traditional Vehicles?</label>
+                </div>
+                <div id="vehicleSection" class="toggle-section mt-3">
+                    <div class="mb-3">
+                        <label for="distancePetrol" class="form-label">Distance by Petrol Vehicle (km):</label>
+                        <input type="number" class="form-control" id="distancePetrol" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="distanceDiesel" class="form-label">Distance by Diesel Vehicle (km):</label>
+                        <input type="number" class="form-control" id="distanceDiesel" min="0">
+                    </div>
+                </div>
+
+                <!-- Flight Inputs -->
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="flightToggle">
+                    <label class="form-check-label" for="flightToggle">✈️ Took a Flight?</label>
+                </div>
+                <div id="flightSection" class="toggle-section mt-3">
+                    <div class="mb-3">
+                        <label for="distanceShortFlight" class="form-label">Short Flight Distance (km):</label>
+                        <input type="number" class="form-control" id="distanceShortFlight" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="distanceLongFlight" class="form-label">Long Flight Distance (km):</label>
+                        <input type="number" class="form-control" id="distanceLongFlight" min="0">
+                    </div>
+                </div>
+
+                <!-- Waste Input -->
+                <div class="mb-3 mt-3">
+                    <label for="waste" class="form-label">Waste Generated (kg):</label>
+                    <input type="number" class="form-control" id="waste" min="0">
+                </div>
+
+                <button type="button" class="btn btn-primary w-100 mt-4" onclick="calculateEmissions()">Calculate Emissions</button>
+            </form>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts mt-4">
+            <!-- Summary Chart -->
+            <div class="chart-container">
+                <h5 class="text-center mb-4">Summary Chart</h5>
+                <canvas id="summaryChart"></canvas>
+            </div>
+
+            <!-- Drill-Down Chart -->
+            <div class="chart-container">
+                <h5 class="text-center mb-4">Energy Source Breakdown</h5>
+                <canvas id="drilldownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        const renewableFactor = 0;
+        const nonRenewableFactor = 0.82;
+        const emissionFactors = {
+            petrol: 2.31,
+            diesel: 2.68,
+            flightsShort: 0.25,
+            flightsLong: 0.11,
+            waste: 0.12,
+        };
+
+        // Initialize Charts
+        const summaryCtx = document.getElementById('summaryChart').getContext('2d');
+        const drilldownCtx = document.getElementById('drilldownChart').getContext('2d');
+
+        const summaryChart = new Chart(summaryCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Energy', 'Vehicles', 'EVs', 'Flights', 'Waste'],
+                datasets: [{
+                    label: 'CO2 Emissions (kg)',
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: ['#007bff', '#ffc107', '#6f42c1', '#28a745', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true },
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        const drilldownChart = new Chart(drilldownCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Renewable Electricity', 'Non-Renewable Electricity', 'Renewable Gas', 'Non-Renewable Gas'],
+                datasets: [{
+                    label: 'CO2 Emissions (kg)',
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#28a745', '#ffc107', '#6f42c1', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true },
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Update slider labels dynamically
+        function updateSlider(slider, renewableLabelId, nonRenewableLabelId) {
+            const value = slider.value;
+            const renewableLabel = document.getElementById(renewableLabelId);
+            const nonRenewableLabel = document.getElementById(nonRenewableLabelId);
+            renewableLabel.innerText = `${value}%`;
+            nonRenewableLabel.innerText = `${100 - value}%`;
+
+            // Dynamically update slider background
+            slider.style.setProperty('--value', `${value}%`);
+        }
+
+        function calculateEmissions() {
+            const electricity = parseFloat(document.getElementById('electricity').value) || 0;
+            const renewableElectricityPercentage = parseFloat(document.getElementById('renewableElectricity').value) / 100;
+            const nonRenewableElectricityPercentage = 1 - renewableElectricityPercentage;
+
+            const naturalGas = parseFloat(document.getElementById('naturalGas').value) || 0;
+            const renewableGasPercentage = parseFloat(document.getElementById('renewableGas').value) / 100;
+            const nonRenewableGasPercentage = 1 - renewableGasPercentage;
+
+            const distancePetrol = parseFloat(document.getElementById('distancePetrol').value) || 0;
+            const distanceDiesel = parseFloat(document.getElementById('distanceDiesel').value) || 0;
+            const evDistance = parseFloat(document.getElementById('evDistance').value) || 0;
+            const evEfficiency = parseFloat(document.getElementById('evEfficiency').value) || 0;
+            const distanceShortFlight = parseFloat(document.getElementById('distanceShortFlight').value) || 0;
+            const distanceLongFlight = parseFloat(document.getElementById('distanceLongFlight').value) || 0;
+            const waste = parseFloat(document.getElementById('waste').value) || 0;
+
+            const renewableElectricityEmissions = electricity * renewableElectricityPercentage * renewableFactor;
+            const nonRenewableElectricityEmissions = electricity * nonRenewableElectricityPercentage * nonRenewableFactor;
+            const renewableGasEmissions = naturalGas * renewableGasPercentage * renewableFactor;
+            const nonRenewableGasEmissions = naturalGas * nonRenewableGasPercentage * nonRenewableFactor;
+            const vehicleEmissions = (distancePetrol * emissionFactors.petrol) + (distanceDiesel * emissionFactors.diesel);
+            const evEmissions = evDistance * evEfficiency * nonRenewableFactor;
+            const flightEmissions = (distanceShortFlight * emissionFactors.flightsShort) + (distanceLongFlight * emissionFactors.flightsLong);
+            const wasteEmissions = waste * emissionFactors.waste;
+
+            summaryChart.data.datasets[0].data = [
+                renewableElectricityEmissions + nonRenewableElectricityEmissions + renewableGasEmissions + nonRenewableGasEmissions,
+                vehicleEmissions,
+                evEmissions,
+                flightEmissions,
+                wasteEmissions
+            ];
+            summaryChart.update();
+
+            drilldownChart.data.datasets[0].data = [
+                renewableElectricityEmissions,
+                nonRenewableElectricityEmissions,
+                renewableGasEmissions,
+                nonRenewableGasEmissions
+            ];
+            drilldownChart.update();
+        }
+
+        // Toggle sections
+        document.getElementById('vehicleToggle').addEventListener('change', function () {
+            document.getElementById('vehicleSection').style.display = this.checked ? 'block' : 'none';
+        });
+        document.getElementById('evToggle').addEventListener('change', function () {
+            document.getElementById('evSection').style.display = this.checked ? 'block' : 'none';
+        });
+        document.getElementById('flightToggle').addEventListener('change', function () {
+            document.getElementById('flightSection').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
